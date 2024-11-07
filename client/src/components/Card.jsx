@@ -1,7 +1,7 @@
-import React from 'react';
+import React from "react";
 
-import { downloadIcon } from '../assets';
-import { downloadImage } from '../utils';
+import { downloadIcon } from "../assets";
+import { downloadImage } from "../utils";
 
 const Card = ({ _id, name, prompt, photo }) => {
   return (

@@ -1,37 +1,53 @@
-import express from 'express';
-import * as dotenv from 'dotenv';
-import { Configuration, OpenAIApi } from 'openai';
+import * as dotenv from "dotenv";
+import express from "express";
+import fetch from "node-fetch";
 
 dotenv.config();
-
 const router = express.Router();
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+router.route("/").get((req, res) => {
+  res.status(200).json({ message: "Hello from Stability AI!" });
 });
 
-const openai = new OpenAIApi(configuration);
-
-router.route('/').get((req, res) => {
-  res.status(200).json({ message: 'Hello from DALL-E!' });
-});
-
-router.route('/').post(async (req, res) => {
+router.route("/").post(async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    const aiResponse = await openai.createImage({
-      prompt,
-      n: 1,
-      size: '1024x1024',
-      response_format: 'b64_json',
-    });
+    const response = await fetch(
+      "https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.STABILITY_API_KEY}`
+        },
+        body: JSON.stringify({
+          text_prompts: [
+            {
+              text: prompt,
+              weight: 1
+            }
+          ],
+          cfg_scale: 7,
+          height: 1024,
+          width: 1024,
+          samples: 1,
+          steps: 30
+        })
+      }
+    );
 
-    const image = aiResponse.data.data[0].b64_json;
-    res.status(200).json({ photo: image });
+    if (!response.ok) {
+      throw new Error(`Stability AI API error: ${response.statusText}`);
+    }
+
+    const responseData = await response.json();
+    const base64Image = responseData.artifacts[0].base64;
+
+    res.status(200).json({ photo: base64Image });
   } catch (error) {
-    console.error(error);
-    res.status(500).send(error?.response.data.error.message || 'Something went wrong');
+    console.error("Error:", error);
+    res.status(500).send(error?.message || "Something went wrong");
   }
 });
 
